@@ -1,99 +1,80 @@
-# DocSales tech test
+# DocSales
 
-## The challange
+![](out.gif)
 
-**Hello future Docster!**
+## Introduction
 
-Your mission now is to build an API with Ruby on Rails that generates PDFs from an HTML fragment
-template with some placeholders to be substituted by data received when creating the PDF.
+This is a demo application, the specifications can be found at the project's
+[README.md](https://github.com/docsales/technical-challange/blob/main/README.md).
 
-The API shall have two endpoints:
+## Requirements
 
-- GET /api/v1/documents/list
-- POST/PUT /api/v1/documents/create
+Those are mostly the main ones:
 
-The first one (documents/list) will show all the previously created documents, their information and
-metadata, as follows:
-```javascript
-// Example response of the GET /api/v1/documents/list request
-[
-  {
-    "uuid": "2b2ab03a-8b81-47c1-9af3-3b3c8d695f71",
-    "pdf_url": "presigned_url or local file path",
-    "description": "Example description 1",
-    "document_data": { // arbitrary data coming from the user
-      "customer_name": "Tomás",
-      "contract_value": "R$ 1.990,90",
-      // ...
-    },
-    "created_at": "2012-04-23T18:25:43.511Z"
-  },
-    {
-    "uuid": "d3b75481-3f8e-4a23-9c2e-738abf8e998b",
-    "pdf_url": "presigned_url or local file path",
-    "description": "Example description 2",
-    "document_data": { // arbitrary data coming from the user
-      "customer_name": "Haroldo",
-      "contract_value": "R$ 10.990,90",
-      // ...
-    },
-    "created_at": "2012-04-23T18:25:43.511Z"
-  },
-  // ...
-]
-```
+- Ruby
+- Rails
+- PostgreSQL
+- TeX Live
 
-The other endpoint should allow the creation of PDFs from HTML fragments with placeholders to substitute
-the data from the `document_data` entry above. The request and the response should be as demonstrated
-below:
+A working install of Ruby and Rails is required to run the app (I've used the
+latest versions of everything). TeX Live is used to generate the PDF.
 
-```javascript
-// Example request to the POST/PUT /api/v1/documents/create endpoint
-{
-  "description": "Example description 2",
-  "document_data": { // arbitrary data coming from the user
-    "customer_name": "Haroldo",
-    "contract_value": "R$ 10.990,90",
-    // ...
-  },
-  "template": "HTML Fragment template goes here, for brevity it is shown on template.html file"
-}
-```
+## Installation
 
-```javascript
-// Example response of the POST/PUT /api/v1/documents/create endpoint
-{
-  "uuid": "10a32fae-1c61-4b2f-b5c7-4de80f4d6f1d",
-  "pdf_url": "presigned_url or local file path",
-  "description": "Example description 2",
-  "document_data": { // arbitrary data coming from the user
-    "customer_name": "Haroldo",
-    "contract_value": "R$ 10.990,90"
-  },
-  "created_at": "2012-04-23T18:25:43.511Z"
-}
-```
+    $ bundle install
 
-### Document creation
+## Usage
 
-When the API is called to create a document with the above JSON, the following steps must be followed:
+There are two routes (as defined in the specification).
 
-1. Substitute all placeholders in the HTML fragment
-  - The placeholder is composed of a string inside two curly brackets `{{}}`. The string should correspond
-  to a key in the `document_data` entry given on the request body. After that this placeholder should be
-  substituted by the corresponding value from the key with same name as in the example below:
+- GET    /api/v1/documents/list
+- POST   /api/v1/documents
 
-  ```html
-  <p>CONTRATANTE: {{customer_name}} </p>
-  ```
+The routes will either respond with 200 or 400, depending on what is being sent to the server.
 
-  Should become
+To make a POST request:
 
-  ```html
-  <p>CONTRATANTE: Haroldo </p>
-  ```
+    $ xh post http://localhost:3000/api/v1/documents \
+    description="test" \
+    document_data='{"customer_name": "Joe", "contract_value": 1000}' \
+    template="$(cat template.html)"
 
-2. Generate the PDF
-  - With the final HTML, the document should be converted to PDF using any tool available for this
-  purpose. After that it should be persisted on cloud storage providers on production (e.g Amazon, Google Cloud Services, Azure), along with the other data used to create the document, as
-  demonstrated above.
+The API also understands the `remote:=true` parameter, in this mode the PDF
+file will be stored remotely and the `pdf_url` field will be updated
+accordingly. Note that uploads are set to expire after 24 hours and the server
+is hard-coded to 0x0.st but more providers can be added later.
+
+Please be mindful when using this parameter, note that 0x0.st is a free of
+charge service and abusing it is discouraged.
+
+Similarly, to make a GET request:
+
+    $ xh http://localhost:3000/api/v1/documents/list
+
+## Running tests
+
+Tests can be run with `rake`.
+
+## Notes
+
+You might be wondering why TeX Live is used to produce the final PDF document
+and not some gem.
+
+I've found that most of the well-known gems to convert HTML into PDF use the
+`wkhtmltopdf` utility, which has been discontinued.
+
+TeX Live (LaTeX) is fully supported on my Linux distribution, produces the
+highest quality documents I've ever seen and LaTeX offers a high degree of
+control over the presentation.
+
+On my system (Arch Linux) those packages were required to get `xelatex` to
+work:
+
+- texlive-basic 2024.2-1
+- texlive-bin 2024.2-1
+- texlive-fontsrecommended 2024.2-1
+- texlive-latex 2024.2-1
+- texlive-xetex 2024.2-1
+
+On macOS, TeX Live can be installed from Homebrew, the instructions can be found
+[here](https://formulae.brew.sh/formula/texlive).
